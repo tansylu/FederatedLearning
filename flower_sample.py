@@ -53,41 +53,41 @@ def load_datasets():
 
 trainloaders, valloaders, testloader = load_datasets()
 
-batch = next(iter(trainloaders[0]))
-images, labels = batch["image"], batch["label"]
-# Reshape and convert images to a NumPy array
-# matplotlib requires images with the shape (height, width, 3)
-images = images.permute(0, 2, 3, 1).numpy()
-# Denormalize
-images = images / 2 + 0.5
+# batch = next(iter(trainloaders[0]))
+# images, labels = batch["image"], batch["label"]
+# # Reshape and convert images to a NumPy array
+# # matplotlib requires images with the shape (height, width, 3)
+# images = images.permute(0, 2, 3, 1).numpy()
+# # Denormalize
+# images = images / 2 + 0.5
 
-# Create a figure and a grid of subplots
-fig, axs = plt.subplots(4, 8, figsize=(12, 6))
+# # Create a figure and a grid of subplots
+# fig, axs = plt.subplots(4, 8, figsize=(12, 6))
 
-# Loop over the images and plot them
-for i, ax in enumerate(axs.flat):
-    ax.imshow(images[i])
-    ax.set_title(trainloaders[0].dataset.features["label"].int2str([labels[i]])[0])
-    ax.axis("off")
+# # Loop over the images and plot them
+# for i, ax in enumerate(axs.flat):
+#     ax.imshow(images[i])
+#     ax.set_title(trainloaders[0].dataset.features["label"].int2str([labels[i]])[0])
+#     ax.axis("off")
 
-# Show the plot
-fig.tight_layout()
-plt.show()
+# # Show the plot
+# fig.tight_layout()
+# plt.show()
 
 class Net(nn.Module):
     def __init__(self) -> None:
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.conv1 = nn.Conv2d(1, 6, 5) 
         self.pool = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)
+        self.fc1 = nn.Linear(16 * 4 * 4, 120)  
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 10)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 16 * 5 * 5)
+        x = x.view(-1, 16 * 4 * 4)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
@@ -123,7 +123,7 @@ def test(net, testloader):
     net.eval()
     with torch.no_grad():
         for batch in testloader:
-            images, labels = batch["img"].to(DEVICE), batch["label"].to(DEVICE)
+            images, labels = batch["image"].to(DEVICE), batch["label"].to(DEVICE)
             outputs = net(images)
             loss += criterion(outputs, labels).item()
             _, predicted = torch.max(outputs.data, 1)
