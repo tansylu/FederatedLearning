@@ -153,3 +153,93 @@ def set_parameters(net, parameters: List[np.ndarray]):
 
 def get_parameters(net) -> List[np.ndarray]:
     return [val.cpu().numpy() for _, val in net.state_dict().items()]
+
+class FlowerClient(fl.client.NumPyClient):
+    def __init__(self, net, trainloader, valloader):
+        self.net = net
+        self.trainloader = trainloader
+        self.valloader = valloader
+
+    def get_parameters(self, config):
+        return get_parameters(self.net)
+
+    def fit(self, parameters, config):
+        set_parameters(self.net, parameters)
+        train(self.net, self.trainloader, epochs=1)
+        return get_parameters(self.net), len(self.trainloader), {}
+
+    def evaluate(self, parameters, config):
+        set_parameters(self.net, parameters)
+        loss, accuracy = test(self.net, self.valloader)
+        return float(loss), len(self.valloader), {"accuracy": float(accuracy)}
+    
+def client_fn(cid: str) -> FlowerClient:
+    """Create a Flower client representing a single organization."""
+
+    # Load model
+    net = Net().to(DEVICE)
+
+    # Load data (CIFAR-10)
+    # Note: each client gets a different trainloader/valloader, so each client
+    # will train and evaluate on their own unique data
+    trainloader = trainloaders[int(cid)]
+    valloader = valloaders[int(cid)]
+
+    # Create a  single Flower client representing a single organization
+    return FlowerClient(net, trainloader, valloader).to_client()
+
+# Create FedAvg strategy
+#TODO: Research what other strategy we can use
+
+strategy = fl.server.strategy.FedAvg(
+    fraction_fit=1.0,  # Sample 100% of available clients for training
+    fraction_evaluate=0.5,  # Sample 50% of available clients for evaluation
+    min_fit_clients=10,  # Never sample less than 10 clients for training
+    min_evaluate_clients=5,  # Never sample less than 5 clients for evaluation
+    min_available_clients=10,  # Wait until all 10 clients are available
+)
+
+# Specify the resources each of your clients need. By default, each
+# client will be allocated 1x CPU and 0x GPUs
+client_resources = {"num_cpus": 1, "num_gpus": 0.0}
+if DEVICE.type == "cuda":
+    # here we are assigning an entire GPU for each client.
+    client_resources = {"num_cpus": 1, "num_gpus": 1.0}
+    # Refer to our documentation for more details about Flower Simulations
+    # and how to setup these `client_resources`.
+
+# Start simulation
+fl.simulation.start_simulation(
+    client_fn=client_fn,
+    num_clients=NUM_CLIENTS,
+    config=fl.server.ServerConfig(num_rounds=5),
+    strategy=strategy,
+    client_resources=client_resources,
+)
+
+def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
+    # Multiply accuracy of each client by number of examples used
+    accuracies = [num_examples * m["accuracy"] for num_examples, m in metrics]
+    examples = [num_examples for num_examples, _ in metrics]
+
+    # Aggregate and return custom metric (weighted average)
+    return {"accuracy": sum(accuracies) / sum(examples)}
+
+# Create FedAvg strategy
+strategy = fl.server.strategy.FedAvg(
+    fraction_fit=1.0,
+    fraction_evaluate=0.5,
+    min_fit_clients=10,
+    min_evaluate_clients=5,
+    min_available_clients=10,
+    evaluate_metrics_aggregation_fn=weighted_average,  # <-- pass the metric aggregation function
+)
+
+# Start simulation
+fl.simulation.start_simulation(
+    client_fn=client_fn,
+    num_clients=NUM_CLIENTS,
+    config=fl.server.ServerConfig(num_rounds=5),
+    strategy=strategy,
+    client_resources=client_resources,
+)
