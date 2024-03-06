@@ -1,21 +1,13 @@
-from collections import OrderedDict
 from typing import List, Tuple
 from flwr.server.client_proxy import ClientProxy
 
-import matplotlib.pyplot as plt
-import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torchvision.transforms as transforms
-from datasets.utils.logging import disable_progress_bar
-from torch.utils.data import DataLoader
 
 import flwr as fl
-from flwr.common import FitRes, Metrics, Parameters
-from flwr_datasets import FederatedDataset
+from flwr.common import FitRes, Parameters
 
 from cnn_structure import Net
+
 
 class SaveModelStrategy(fl.server.strategy.FedAvg):
     net = Net()

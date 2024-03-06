@@ -1,7 +1,5 @@
-from torch import Tensor
+from matplotlib import pyplot as plt
 from cnn_structure import Net
-from dataset_loader import load_datasets
-from constants import *
 
 
 # trainloaders, valloaders, testloader = load_datasets(NUM_CLIENTS, BATCH_SIZE)
@@ -28,7 +26,7 @@ from constants import *
 # plt.show()
 
 
-def show_result(batch, net:Net):
+def show_result(batch, net: Net):
     images, labels = batch["image"], batch["label"]
 
     # Create a figure and a grid of subplots
@@ -40,24 +38,23 @@ def show_result(batch, net:Net):
         ax.imshow(images[i][0])
         ax.set_title(
             "Guess: "
-            +
-            str(most_likely(net,images[i]))
-            +" - Label: "
+            + str(most_likely(net, images[i]))
+            + " - Label: "
             + str(labels[i].item())
         )
         ax.axis("off")
-
 
     # Show the plot
     fig.tight_layout()
     plt.show()
 
-def most_likely(net:Net,img) -> int:
-    r=net(img)
-    m=r[0][0].item()
-    mi=0
-    for n,i in zip(range(len(r[0])),list(r[0])):
-        if i>m:
-            m=i
-            mi=n
+
+def most_likely(net: Net, img) -> int:
+    r = net(img)
+    m = r[0][0].item()
+    mi = 0
+    for n, i in zip(range(len(r[0])), list(r[0])):
+        if i > m:
+            m = i
+            mi = n
     return mi

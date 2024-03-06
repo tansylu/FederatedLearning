@@ -1,27 +1,23 @@
 from collections import OrderedDict
-from typing import List, Tuple
+from typing import List
 
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision.transforms as transforms
-from datasets.utils.logging import disable_progress_bar
-from torch.utils.data import DataLoader
 
 import flwr as fl
-from flwr.common import Metrics
-from flwr_datasets import FederatedDataset
-from constants import *
+
+from constants import DEVICE
+
 
 class Net(nn.Module):
     def __init__(self) -> None:
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(1, 6, 5) 
+        self.conv1 = nn.Conv2d(1, 6, 5)
         self.pool = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 4 * 4, 120)  
+        self.fc1 = nn.Linear(16 * 4 * 4, 120)
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 10)
 
@@ -33,7 +29,8 @@ class Net(nn.Module):
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
         return x
-    
+
+
 def train(net, trainloader, epochs: int, verbose=False):
     """Train the network on the training set."""
     criterion = torch.nn.CrossEntropyLoss()
@@ -74,6 +71,8 @@ def test(net, testloader):
     loss /= len(testloader.dataset)
     accuracy = correct / total
     return loss, accuracy
+
+
 def set_parameters(net, parameters: List[np.ndarray]):
     params_dict = zip(net.state_dict().keys(), parameters)
     state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
@@ -82,6 +81,7 @@ def set_parameters(net, parameters: List[np.ndarray]):
 
 def get_parameters(net) -> List[np.ndarray]:
     return [val.cpu().numpy() for _, val in net.state_dict().items()]
+
 
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, net, trainloader, valloader):
@@ -101,4 +101,3 @@ class FlowerClient(fl.client.NumPyClient):
         set_parameters(self.net, parameters)
         loss, accuracy = test(self.net, self.valloader)
         return float(loss), len(self.valloader), {"accuracy": float(accuracy)}
- 
