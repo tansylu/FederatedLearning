@@ -14,32 +14,34 @@ from constants import DEVICE
 class Net(nn.Module):
     def __init__(self) -> None:
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(1, 6, 5)
+        self.conv1 = nn.Conv2d(3, 6, 5)
         self.pool = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 4 * 4, 120)
+        self.fc1 = None  # Initialize as None
         self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
+        self.fc3 = nn.Linear(84, 1)  # Change the number of output neurons to 1
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 16 * 4 * 4)
+        x = x.view(x.size(0), -1)  # Flatten the tensor
+        if self.fc1 is None:
+            self.fc1 = nn.Linear(x.size(1), 120).to(x.device)  # Dynamically define fc1
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        x = self.fc3(x)
+        x = torch.sigmoid(self.fc3(x))  # Use a sigmoid activation function
         return x
-
 
 def train(net, trainloader, epochs: int, verbose=False):
     """Train the network on the training set."""
-    criterion = torch.nn.CrossEntropyLoss()
+    criterion = torch.nn.BCELoss()
     optimizer = torch.optim.Adam(net.parameters())
     net.train()
     for epoch in range(epochs):
         correct, total, epoch_loss = 0, 0, 0.0
         for batch in trainloader:
-            images, labels = batch["image"].to(DEVICE), batch["label"].to(DEVICE)
+            images = batch["image"].to(DEVICE)
+            labels = batch["labels"].to(DEVICE).float().view(-1, 1)  # Convert labels to Float
             optimizer.zero_grad()
             outputs = net(images)
             loss = criterion(outputs, labels)
@@ -57,12 +59,14 @@ def train(net, trainloader, epochs: int, verbose=False):
 
 def test(net, testloader):
     """Evaluate the network on the entire test set."""
-    criterion = torch.nn.CrossEntropyLoss()
+    criterion = torch.nn.BCELoss()
     correct, total, loss = 0, 0, 0.0
     net.eval()
     with torch.no_grad():
         for batch in testloader:
-            images, labels = batch["image"].to(DEVICE), batch["label"].to(DEVICE)
+            images = batch["image"].to(DEVICE)
+            labels = batch["labels"].to(DEVICE).float().view(-1, 1)  # Convert labels to Float
+            # Reshape labels to match the output of the model
             outputs = net(images)
             loss += criterion(outputs, labels).item()
             _, predicted = torch.max(outputs.data, 1)

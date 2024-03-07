@@ -20,7 +20,7 @@ valloader = valloaders[0]
 net = Net().to(DEVICE)
 
 
-for epoch in range(5):
+for epoch in range(3):
     train(net, trainloader, 1)
     loss, accuracy = test(net, valloader)
     print(f"Epoch {epoch+1}: validation loss {loss}, accuracy {accuracy}")
@@ -33,32 +33,13 @@ print(f"Final test set performance:\n\tloss {loss}\n\taccuracy {accuracy}")
 
 
 def gen_client(cid: str) -> FlowerClient:
-    """Create a Flower client representing a single organization."""
-
-    # Load model
+    # Create a client representing a single institution
     net = Net().to(DEVICE)
-
-    # Load data (CIFAR-10)
-    # Note: each client gets a different trainloader/valloader, so each client
+    # each client gets a different trainloader/valloader, so each client
     # will train and evaluate on their own unique data
     trainloader = trainloaders[int(cid)]
     valloader = valloaders[int(cid)]
-
-    # Create a  single Flower client representing a single organization
     return FlowerClient(net, trainloader, valloader).to_client()
-
-
-# Create FedAvg strategy
-# TODO: Research what other strategy we can use
-
-# Specify the resources each of your clients need. By default, each
-# client will be allocated 1x CPU and 0x GPUs
-client_resources = {"num_cpus": 1, "num_gpus": 0.0}
-if DEVICE.type == "cuda":
-    # here we are assigning an entire GPU for each client.
-    client_resources = {"num_cpus": 1, "num_gpus": 1.0}
-    # Refer to our documentation for more details about Flower Simulations
-    # and how to setup these `client_resources`.
 
 
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
@@ -93,8 +74,7 @@ fl.simulation.start_simulation(
     client_fn=gen_client,
     num_clients=NUM_CLIENTS,
     config=fl.server.ServerConfig(num_rounds=5),
-    strategy=strategy,
-    client_resources=client_resources,
+    strategy=strategy
 )
 
 fb = next(iter(testloader))
