@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Union
 from flwr.server.client_proxy import ClientProxy
 
 import torch
@@ -15,9 +15,9 @@ class SaveModelStrategy(fl.server.strategy.FedAvg):
     def aggregate_fit(
         self,
         server_round: int,
-        results: List[Tuple[ClientProxy | FitRes]],
-        failures: List[Tuple[ClientProxy, FitRes] | BaseException],
-    ) -> Tuple[Parameters | dict[str, bool | bytes | float | int | str] | None]:
+        results: List[Tuple[Union[ClientProxy, FitRes]]],
+        failures: List[Tuple[Union[ClientProxy, FitRes], BaseException]],
+    ) -> Tuple[Union[Parameters, dict[str, Union[bool, bytes, float, int, str]]], None]:
         param, metrics = super().aggregate_fit(server_round, results, failures)
         self.net.load_state_dict(
             {
