@@ -39,7 +39,10 @@ def train(net, trainloader, epochs: int, verbose=False):
     net.train()
     for epoch in range(epochs):
         correct, total, epoch_loss = 0, 0, 0.0
+        i = 0
         for batch in trainloader:
+            print(i)
+            i+=1
             images = batch["image"].to(DEVICE)
             labels = batch["labels"].to(DEVICE).float().view(-1, 1)  # Convert labels to Float
             optimizer.zero_grad()

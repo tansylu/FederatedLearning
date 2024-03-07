@@ -10,4 +10,4 @@ print(
 # disable_progress_bar()
 
 NUM_CLIENTS = 5
-BATCH_SIZE = 50
+BATCH_SIZE = 32
