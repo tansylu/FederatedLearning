@@ -6,13 +6,14 @@ def load_datasets(num_cli_model: int, BATCH_SIZE: int):
 
     fds = FederatedDataset(dataset="trpakov/chest-xray-classification", subset="full",  partitioners={"train": num_cli_model})
 
-    def apply_transforms(batch):
+    def apply_transforms(batch):                                                                                                                                                                                                         
         transform = transforms.Compose(
             [
+                transforms.Resize((224, 224)),  # Resize the images to 224x224
                 transforms.ToTensor(),  # Convert the images to PyTorch tensors
-                # transforms.Normalize(
-                #     (0.1307,), (0.3081,)
-                # ),  # Normalize the images using the mean and standard deviation of the MNIST dataset
+                transforms.Normalize(
+                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                ),  # Normalize the images using the mean and standard deviation of the ImageNet dataset
             ]
         )
         batch["image"] = [transform(img) for img in batch["image"]]

@@ -9,29 +9,21 @@ import torch.nn.functional as F
 import flwr as fl
 
 from constants import DEVICE
-
+from torchvision.models import mobilenet_v2
 
 class Net(nn.Module):
     def __init__(self) -> None:
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = None  # Initialize as None
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 1)  # Change the number of output neurons to 1
+        # Load a pre-trained MobileNetV2 model
+        self.mobilenet = mobilenet_v2(pretrained=True)
+        # Replace the last layer
+        num_ftrs = self.mobilenet.classifier[1].in_features
+        self.mobilenet.classifier[1] = nn.Linear(num_ftrs, 1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(x.size(0), -1)  # Flatten the tensor
-        if self.fc1 is None:
-            self.fc1 = nn.Linear(x.size(1), 120).to(x.device)  # Dynamically define fc1
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = torch.sigmoid(self.fc3(x))  # Use a sigmoid activation function
+        x = self.mobilenet(x)
+        x = torch.sigmoid(x)  # Use a sigmoid activation function
         return x
-
 def train(net, trainloader, epochs: int, verbose=False):
     """Train the network on the training set."""
     criterion = torch.nn.BCELoss()
@@ -72,7 +64,7 @@ def test(net, testloader):
             # Reshape labels to match the output of the model
             outputs = net(images)
             loss += criterion(outputs, labels).item()
-            _, predicted = torch.max(outputs.data, 1)
+            predicted = (outputs.data > 0.5).float()
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
     loss /= len(testloader.dataset)

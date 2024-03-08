@@ -21,6 +21,13 @@ net = Net().to(DEVICE)
 
 
 for epoch in range(3):
+    # Get the first batch of data
+    dataiter = iter(trainloader)
+    batch = dataiter.next()
+    images = batch["image"]
+    labels = batch["labels"]
+    # Print the labels
+    print(labels)
     train(net, trainloader, 1)
     loss, accuracy = test(net, valloader)
     print(f"Epoch {epoch+1}: validation loss {loss}, accuracy {accuracy}")
@@ -60,23 +67,23 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 # of good models, there is the risk of the avg getting the server stuck
 # in the middle)
 
-strategy = SaveModelStrategy(
-    fraction_fit=1.0,
-    fraction_evaluate=0.5,
-    min_fit_clients=10,
-    min_evaluate_clients=5,
-    min_available_clients=10,
-    evaluate_metrics_aggregation_fn=weighted_average,  # <-- pass the metric aggregation function
-)
+# strategy = SaveModelStrategy(
+#     fraction_fit=1.0,
+#     fraction_evaluate=0.5,
+#     min_fit_clients=10,
+#     min_evaluate_clients=5,
+#     min_available_clients=10,
+#     evaluate_metrics_aggregation_fn=weighted_average,  # <-- pass the metric aggregation function
+# )
 
-# Start simulation
-fl.simulation.start_simulation(
-    client_fn=gen_client,
-    num_clients=NUM_CLIENTS,
-    config=fl.server.ServerConfig(num_rounds=5),
-    strategy=strategy
-)
+# # Start simulation
+# fl.simulation.start_simulation(
+#     client_fn=gen_client,
+#     num_clients=NUM_CLIENTS,
+#     config=fl.server.ServerConfig(num_rounds=5),
+#     strategy=strategy
+# )
 
 fb = next(iter(testloader))
 
-show_result(fb, strategy.net)
+show_result(fb, net)

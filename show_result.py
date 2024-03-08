@@ -1,44 +1,27 @@
 from matplotlib import pyplot as plt
+import torch
 from cnn_structure import Net
-
-
-# trainloaders, valloaders, testloader = load_datasets(NUM_CLIENTS, BATCH_SIZE)
-
-# batch = next(iter(trainloaders[0]))
-# images, labels = batch["image"], batch["label"]
-# # Reshape and convert images to a NumPy array
-# # matplotlib requires images with the shape (height, width, 3)
-# images = images.permute(0, 2, 3, 1).numpy()
-# # Denormalize
-# images = images / 2 + 0.5
-
-# # Create a figure and a grid of subplots
-# fig, axs = plt.subplots(4, 8, figsize=(12, 6))
-
-# # Loop over the images and plot them
-# for i, ax in enumerate(axs.flat):
-#     ax.imshow(images[i])
-#     ax.set_title(trainloaders[0].dataset.features["label"].int2str([labels[i]])[0])
-#     ax.axis("off")
-
-# # Show the plot
-# fig.tight_layout()
-# plt.show()
-
+from constants import DEVICE
 
 def show_result(batch, net: Net):
-    images, labels = batch["image"], batch["label"]
+    images, labels = batch["image"], batch["labels"]
+    images = images.to(DEVICE)
+    labels = labels.to(DEVICE)
 
     # Create a figure and a grid of subplots
     fig, axs = plt.subplots(4, 8, figsize=(12, 6))
 
     net.eval()
+    with torch.no_grad():
+        outputs = net(images)
+        _, predicted = torch.max(outputs, 1)
+
     # Loop over the images and plot them
     for i, ax in enumerate(axs.flat):
-        ax.imshow(images[i][0])
+        ax.imshow(images[i].cpu().numpy()[0], cmap='gray')
         ax.set_title(
             "Guess: "
-            + str(most_likely(net, images[i]))
+            + str(predicted[i].item())
             + " - Label: "
             + str(labels[i].item())
         )
@@ -47,14 +30,3 @@ def show_result(batch, net: Net):
     # Show the plot
     fig.tight_layout()
     plt.show()
-
-
-def most_likely(net: Net, img) -> int:
-    r = net(img)
-    m = r[0][0].item()
-    mi = 0
-    for n, i in zip(range(len(r[0])), list(r[0])):
-        if i > m:
-            m = i
-            mi = n
-    return mi
