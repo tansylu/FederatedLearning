@@ -20,7 +20,7 @@ valloader = valloaders[0]
 net = Net().to(DEVICE)
 
 
-for epoch in range(3):
+for epoch in range(5):
     # Get the first batch of data
     dataiter = iter(trainloader)
     batch = dataiter.next()

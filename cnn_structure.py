@@ -25,10 +25,11 @@ class Net(nn.Module):
         x = torch.sigmoid(x)  # Use a sigmoid activation function
         return x
 def train(net, trainloader, epochs: int, verbose=False):
-    """Train the network on the training set."""
-    criterion = torch.nn.BCELoss()
+    pos_weight = torch.tensor([0.9]).to(DEVICE)
+    criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
     optimizer = torch.optim.Adam(net.parameters())
     net.train()
+
     for epoch in range(epochs):
         correct, total, epoch_loss = 0, 0, 0.0
         i = 0
@@ -54,7 +55,8 @@ def train(net, trainloader, epochs: int, verbose=False):
 
 def test(net, testloader):
     """Evaluate the network on the entire test set."""
-    criterion = torch.nn.BCELoss()
+    pos_weight = torch.tensor([0.9]).to(DEVICE)
+    criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
     correct, total, loss = 0, 0, 0.0
     net.eval()
     with torch.no_grad():
@@ -67,6 +69,10 @@ def test(net, testloader):
             predicted = (outputs.data > 0.5).float()
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
+            # Print out the predictions for this batch
+            print("Predictions:", predicted)
+            print("True labels:", labels)
+
     loss /= len(testloader.dataset)
     accuracy = correct / total
     return loss, accuracy
