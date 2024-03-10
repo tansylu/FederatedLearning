@@ -1,6 +1,7 @@
 from collections import OrderedDict
+import math
 from typing import List
-
+from sklearn.utils.class_weight import compute_class_weight
 import numpy as np
 import torch
 import torch.nn as nn
@@ -24,12 +25,11 @@ class Net(nn.Module):
         x = self.mobilenet(x)
         x = torch.sigmoid(x)  # Use a sigmoid activation function
         return x
+    
 def train(net, trainloader, epochs: int, verbose=False):
-    pos_weight = torch.tensor([0.9]).to(DEVICE)
-    criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+    criterion = torch.nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(net.parameters())
     net.train()
-
     for epoch in range(epochs):
         correct, total, epoch_loss = 0, 0, 0.0
         i = 0
@@ -46,36 +46,60 @@ def train(net, trainloader, epochs: int, verbose=False):
             # Metrics
             epoch_loss += loss
             total += labels.size(0)
-            correct += (torch.max(outputs.data, 1)[1] == labels).sum().item()
+            predicted = (outputs > 0.5).float()
+            correct += (predicted == labels).sum().item()
         epoch_loss /= len(trainloader.dataset)
         epoch_acc = correct / total
         if verbose:
             print(f"Epoch {epoch+1}: train loss {epoch_loss}, accuracy {epoch_acc}")
 
+import matplotlib.pyplot as plt
 
 def test(net, testloader):
+    criterion = torch.nn.BCEWithLogitsLoss()
     """Evaluate the network on the entire test set."""
-    pos_weight = torch.tensor([0.9]).to(DEVICE)
-    criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
-    correct, total, loss = 0, 0, 0.0
     net.eval()
+    correct = 0
+    total = 0
+    loss_total = 0
+    labels_total = []
+    predictions_total = []
+
     with torch.no_grad():
-        for batch in testloader:
-            images = batch["image"].to(DEVICE)
-            labels = batch["labels"].to(DEVICE).float().view(-1, 1)  # Convert labels to Float
-            # Reshape labels to match the output of the model
+        for i, data in enumerate(testloader):
+            images= data["image"]
+            labels = data["labels"]
+            labels = labels.view(-1, 1).float()
+            images, labels = images.to(DEVICE), labels.to(DEVICE)
             outputs = net(images)
-            loss += criterion(outputs, labels).item()
-            predicted = (outputs.data > 0.5).float()
+            predicted = (outputs > 0.5).float()
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
-            # Print out the predictions for this batch
-            print("Predictions:", predicted)
-            print("True labels:", labels)
+            loss = criterion(outputs, labels)
+            loss_total += loss.item()
 
-    loss /= len(testloader.dataset)
+            # Convert tensors to lists and add to total
+            labels_total += labels.tolist()
+            predictions_total += predicted.tolist()
+
+            # Print outputs
+            print(f"Outputs: {outputs}")
+            print(f"Predicted: {predicted}")
+
+            # Plot and save image, label, and prediction
+            grid_size = math.isqrt(len(images))
+            fig, axs = plt.subplots(grid_size, grid_size, figsize=(20, 20))
+            
+            for j, ax in enumerate(axs.flatten()):
+                if j < len(images) and isinstance(ax, plt.Axes):
+                    img = images[j].permute((1, 2, 0))  # Move channels dimension to the end
+                    ax.imshow(img.cpu().numpy())
+                    ax.set_title(f"L: {labels[j].item()}, G: {predicted[j].item()}")
+            plt.savefig(f"output_{i}.png")
+
     accuracy = correct / total
-    return loss, accuracy
+    loss_avg = loss_total / total
+    return loss_avg, accuracy, labels_total, predictions_total
 
 
 def set_parameters(net, parameters: List[np.ndarray]):

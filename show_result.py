@@ -3,7 +3,7 @@ import torch
 from cnn_structure import Net
 from constants import DEVICE
 
-def show_result(batch, net: Net):
+def show_result(batch, net: Net, epoch):
     images, labels = batch["image"], batch["labels"]
     images = images.to(DEVICE)
     labels = labels.to(DEVICE)
@@ -20,13 +20,13 @@ def show_result(batch, net: Net):
     for i, ax in enumerate(axs.flat):
         ax.imshow(images[i].cpu().numpy()[0], cmap='gray')
         ax.set_title(
-            "Guess: "
+            "G: "
             + str(predicted[i].item())
-            + " - Label: "
+            + "L: "
             + str(labels[i].item())
         )
         ax.axis("off")
 
-    # Show the plot
+    # Save the plot
     fig.tight_layout()
-    plt.show()
+    plt.savefig(f'epoch_{epoch}.png')

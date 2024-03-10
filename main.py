@@ -10,8 +10,9 @@ from save_model_strat import SaveModelStrategy
 from show_result import show_result
 
 
+print("Loading datasets...")
 trainloaders, valloaders, testloader = load_datasets(NUM_CLIENTS, BATCH_SIZE)
-
+print("Datasets loaded.")
 
 ## CNN
 
@@ -19,25 +20,29 @@ trainloader = trainloaders[0]
 valloader = valloaders[0]
 net = Net().to(DEVICE)
 
+from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score
 
 for epoch in range(5):
-    # Get the first batch of data
-    dataiter = iter(trainloader)
-    batch = dataiter.next()
-    images = batch["image"]
-    labels = batch["labels"]
-    # Print the labels
-    print(labels)
+    print(f"Starting epoch {epoch+1}...")
     train(net, trainloader, 1)
-    loss, accuracy = test(net, valloader)
-    print(f"Epoch {epoch+1}: validation loss {loss}, accuracy {accuracy}")
+    print(f"Finished training for epoch {epoch+1}. Starting testing...")
+    loss, accuracy, labels, predictions = test(net, valloader)
+    precision = precision_score(labels, predictions)
+    recall = recall_score(labels, predictions)
+    f1 = f1_score(labels, predictions)
+    auc_roc = roc_auc_score(labels, predictions)
+    print(f"Epoch {epoch+1}: validation loss {loss}, accuracy {accuracy}, precision {precision}, recall {recall}, F1 {f1}, AUC-ROC {auc_roc}")
 
-loss, accuracy = test(net, testloader)
-print(f"Final test set performance:\n\tloss {loss}\n\taccuracy {accuracy}")
-
-
-## Federated learning
-
+print("Creating clients...")
+def gen_client(cid: str) -> FlowerClient:
+    # Create a client representing a single institution
+    net = Net().to(DEVICE)
+    # each client gets a different trainloader/valloader, so each client
+    # will train and evaluate on their own unique data
+    trainloader = trainloaders[int(cid)]
+    valloader = valloaders[int(cid)]
+    return FlowerClient(net, trainloader, valloader).to_client()
+print("Clients created.")
 
 def gen_client(cid: str) -> FlowerClient:
     # Create a client representing a single institution
@@ -84,6 +89,3 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 #     strategy=strategy
 # )
 
-fb = next(iter(testloader))
-
-show_result(fb, net)
