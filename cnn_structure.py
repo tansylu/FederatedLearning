@@ -143,6 +143,6 @@ class FlowerClient(fl.client.NumPyClient):
         print("Setting parameters for evaluation...")
         set_parameters(self.net, parameters)
         print("Starting evaluation...")
-        loss, accuracy = test(self.net, self.valloader)
+        loss, accuracy, labels, predictions = test(self.net, self.valloader)
         print(f"Loss: {loss}, Accuracy: {accuracy}")
         return float(loss), len(self.valloader), {"accuracy": float(accuracy)}
