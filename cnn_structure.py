@@ -64,7 +64,7 @@ def test(net, testloader):
     loss_total = 0
     labels_total = []
     predictions_total = []
-
+    flag = False
     with torch.no_grad():
         for i, data in enumerate(testloader):
             images= data["image"]
@@ -89,13 +89,14 @@ def test(net, testloader):
             # Plot and save image, label, and prediction
             grid_size = math.isqrt(len(images))
             fig, axs = plt.subplots(grid_size, grid_size, figsize=(20, 20))
-            
-            for j, ax in enumerate(axs.flatten()):
-                if j < len(images) and isinstance(ax, plt.Axes):
-                    img = images[j].permute((1, 2, 0))  # Move channels dimension to the end
-                    ax.imshow(img.cpu().numpy())
-                    ax.set_title(f"L: {labels[j].item()}, G: {predicted[j].item()}")
-            plt.savefig(f"output_{i}.png")
+            if not flag:
+                for j, ax in enumerate(axs.flatten()):
+                    if j < len(images) and isinstance(ax, plt.Axes):
+                        img = images[j].permute((1, 2, 0))  # Move channels dimension to the end
+                        ax.imshow(img.cpu().numpy())
+                        ax.set_title(f"L: {labels[j].item()}, G: {predicted[j].item()}")
+                plt.savefig(f"output_{i}.png")
+                flag = True
 
     accuracy = correct / total
     loss_avg = loss_total / total
@@ -107,10 +108,15 @@ def set_parameters(net, parameters: List[np.ndarray]):
     state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
     net.load_state_dict(state_dict, strict=True)
 
-
 def get_parameters(net) -> List[np.ndarray]:
-    return [val.cpu().numpy() for _, val in net.state_dict().items()]
-
+    print('Getting parameters...')
+    parameters = []
+    for name, val in net.state_dict().items():
+        param_numpy = val.cpu().numpy()
+        parameters.append(param_numpy)
+        print(f"Parameter {name}: shape {param_numpy.shape}, size {param_numpy.size}")
+    print(f"Total number of parameters: {sum(param.size for param in parameters)}")
+    return parameters
 
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, net, trainloader, valloader):
@@ -119,14 +125,24 @@ class FlowerClient(fl.client.NumPyClient):
         self.valloader = valloader
 
     def get_parameters(self, config):
-        return get_parameters(self.net)
+        print("Getting parameters...")
+        params = get_parameters(self.net)
+        print("Parameters:")
+        return params
 
     def fit(self, parameters, config):
+        print("Setting parameters...")
         set_parameters(self.net, parameters)
+        print("Starting training...")
         train(self.net, self.trainloader, epochs=1)
-        return get_parameters(self.net), len(self.trainloader), {}
+        params = get_parameters(self.net)
+        print("Parameters after training:")
+        return params, len(self.trainloader), {}
 
     def evaluate(self, parameters, config):
+        print("Setting parameters for evaluation...")
         set_parameters(self.net, parameters)
+        print("Starting evaluation...")
         loss, accuracy = test(self.net, self.valloader)
+        print(f"Loss: {loss}, Accuracy: {accuracy}")
         return float(loss), len(self.valloader), {"accuracy": float(accuracy)}
