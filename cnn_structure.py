@@ -10,19 +10,22 @@ import torch.nn.functional as F
 import flwr as fl
 
 from constants import DEVICE
-from torchvision.models import mobilenet_v2
+from torchvision.models import resnet18
 
 class Net(nn.Module):
     def __init__(self) -> None:
         super(Net, self).__init__()
-        # Load a pre-trained MobileNetV2 model
-        self.mobilenet = mobilenet_v2(pretrained=True)
+        # Load a pre-trained ResNet18 model
+        self.resnet = resnet18(pretrained=True)
+        # Freeze the pre-trained layers
+        for param in self.resnet.parameters():
+            param.requires_grad = False
         # Replace the last layer
-        num_ftrs = self.mobilenet.classifier[1].in_features
-        self.mobilenet.classifier[1] = nn.Linear(num_ftrs, 1)
+        num_ftrs = self.resnet.fc.in_features
+        self.resnet.fc = nn.Linear(num_ftrs, 1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.mobilenet(x)
+        x = self.resnet(x)
         x = torch.sigmoid(x)  # Use a sigmoid activation function
         return x
     
