@@ -4,10 +4,10 @@ from typing import List, Tuple
 import flwr as fl
 from flwr.common import Metrics
 from cnn_structure import FlowerClient, Net, test, train
-from constants import BATCH_SIZE, DEVICE, NUM_CLIENTS
+from constants import BATCH_SIZE, DEVICE, NUM_CLIENTS, NUM_ROUNDS
 from dataset_loader import load_datasets
 from save_model_strat import SaveModelStrategy
-from show_result import show_result
+from show_result import save_result
 
 
 trainloaders, valloaders, testloader = load_datasets(NUM_CLIENTS, BATCH_SIZE)
@@ -17,16 +17,16 @@ trainloaders, valloaders, testloader = load_datasets(NUM_CLIENTS, BATCH_SIZE)
 
 trainloader = trainloaders[0]
 valloader = valloaders[0]
-net = Net().to(DEVICE)
+# net = Net().to(DEVICE)
 
 
-for epoch in range(5):
-    train(net, trainloader, 1)
-    loss, accuracy = test(net, valloader)
-    print(f"Epoch {epoch+1}: validation loss {loss}, accuracy {accuracy}")
+# for epoch in range(5):
+#     train(net, trainloader, 1)
+#     loss, accuracy = test(net, valloader)
+#     print(f"Epoch {epoch+1}: validation loss {loss}, accuracy {accuracy}")
 
-loss, accuracy = test(net, testloader)
-print(f"Final test set performance:\n\tloss {loss}\n\taccuracy {accuracy}")
+# loss, accuracy = test(net, testloader)
+# print(f"Final test set performance:\n\tloss {loss}\n\taccuracy {accuracy}")
 
 
 ## Federated learning
@@ -53,7 +53,7 @@ def gen_client(cid: str) -> FlowerClient:
 
 # Specify the resources each of your clients need. By default, each
 # client will be allocated 1x CPU and 0x GPUs
-client_resources = {"num_cpus": 1, "num_gpus": 0.0}
+client_resources = {"num_cpus": 5, "num_gpus": 0.0}
 if DEVICE.type == "cuda":
     # here we are assigning an entire GPU for each client.
     client_resources = {"num_cpus": 1, "num_gpus": 1.0}
@@ -92,11 +92,11 @@ strategy = SaveModelStrategy(
 fl.simulation.start_simulation(
     client_fn=gen_client,
     num_clients=NUM_CLIENTS,
-    config=fl.server.ServerConfig(num_rounds=5),
+    config=fl.server.ServerConfig(num_rounds=NUM_ROUNDS),
     strategy=strategy,
     client_resources=client_resources,
 )
 
 fb = next(iter(testloader))
 
-show_result(fb, strategy.net)
+save_result(fb, strategy.net)

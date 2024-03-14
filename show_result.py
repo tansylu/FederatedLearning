@@ -26,7 +26,7 @@ from cnn_structure import Net
 # plt.show()
 
 
-def show_result(batch, net: Net):
+def save_result(batch, net: Net):
     images, labels = batch["image"], batch["label"]
 
     # Create a figure and a grid of subplots

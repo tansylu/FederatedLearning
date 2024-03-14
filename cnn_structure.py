@@ -8,7 +8,7 @@ import torch.nn.functional as F
 
 import flwr as fl
 
-from constants import DEVICE
+from constants import DEVICE, NUM_EPOCHS
 
 
 class Net(nn.Module):
@@ -94,7 +94,7 @@ class FlowerClient(fl.client.NumPyClient):
 
     def fit(self, parameters, config):
         set_parameters(self.net, parameters)
-        train(self.net, self.trainloader, epochs=1)
+        train(self.net, self.trainloader, epochs=NUM_EPOCHS)
         return get_parameters(self.net), len(self.trainloader), {}
 
     def evaluate(self, parameters, config):
